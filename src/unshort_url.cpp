@@ -18,8 +18,77 @@
 #include "ssl.hpp"
 #include "uri.hpp"
 #include "clear_url.hpp"
-#include "unshort_url.hpp"
 #include "exceptions.hpp"
+
+struct Response {
+	private:
+		float http_version;
+		int status_code;
+		std::string status_message;
+		std::vector<std::tuple<std::string, std::string>> headers;
+		std::string body;
+	public:
+		void set_http_version(const float value) {
+			this -> http_version = value;
+		}
+		
+		const float get_http_version() const {
+			return this -> http_version;
+		}
+		
+		void set_status_code(const int value) {
+			this -> status_code = value;
+		}
+		
+		const int get_status_code() const {
+			return this -> status_code;
+		}
+		
+		void set_status_message(const std::string value) {
+			this -> status_message = value;
+		}
+		
+		const std::string get_status_message() const {
+			return this -> status_message;
+		}
+		
+		void set_headers(const std::vector<std::tuple<std::string, std::string>> value) {
+			this -> headers = value;
+		}
+		
+		const std::vector<std::tuple<std::string, std::string>> get_headers() const {
+			return this -> headers;
+		}
+		
+		void set_body(const std::string value) {
+			this -> body = value;
+		}
+		
+		const std::string get_body() const {
+			return this -> body;
+		}
+		
+		const bool has_header(const std::string name) const {
+			for (const std::tuple<std::string, std::string> header : this -> headers) {
+				if (std::get<0>(header) == name) {
+					return true;
+				}
+			}
+			
+			return false;
+		}
+		
+		const std::string get_header(const std::string name) const {
+			for (const std::tuple<std::string, std::string> header : this -> headers) {
+				if (std::get<0>(header) == name) {
+					return std::get<1>(header);
+				}
+			}
+			
+			return NULL;
+		}
+		
+};
 
 const std::string request_headers[][2] = {
 	{"Accept", "*/*"},
@@ -273,7 +342,7 @@ const std::string unshort_url(
 		const std::string::const_iterator http_version_end = std::find(http_version_start, headers_end, ' ');
 		
 		const float http_version = std::stof(std::string(http_version_start, http_version_end).c_str());
-		std::cout << "a" << std::endl;
+		
 		if (!(http_version == 1.0f || http_version == 1.1f)) {
 			RemoteProtocolError e;
 			e.set_message("Unsupported protocol version: " + std::to_string(http_version));
@@ -281,14 +350,14 @@ const std::string unshort_url(
 			
 			throw(e);
 		}
-		std::cout << "a" << std::endl;
+		
 		response.set_http_version(http_version);
 		
 		const std::string::const_iterator status_code_start = std::find(http_version_end, headers_end, ' ') + 1;
 		const std::string::const_iterator status_code_end = std::find(status_code_start, headers_end, ' ');
-		std::cout << "a" << std::endl;
+		
 		const int status_code = std::stoi(std::string(status_code_start, status_code_end));
-		std::cout << "a" << std::endl;
+		
 		std::string status_message;
 		
 		switch (status_code) {
@@ -427,17 +496,17 @@ const std::string unshort_url(
 		std::string::const_iterator header_end = status_code_end;
 		
 		while (header_end != headers_end) {
-			std::cout << "1" << std::endl;
+			
 			const std::string::const_iterator header_start = std::find(header_end, headers_end, '\r') + 2;
 			header_end = std::find(header_start, headers_end, '\r');
 			
 			const std::string header = std::string(header_start, header_end);
-			std::cout << "2" << std::endl;
+			
 			const std::string::const_iterator key_end = std::find(header_start, header_end, ':');
-			std::cout << "3" << std::endl;
+			
 			const std::string key = std::string(header_start, key_end);
 			const std::string value = std::string(key_end + 2, header_end);
-			std::cout << "4" << std::endl;
+			
 			headers.push_back(std::make_tuple(key, value));
 		}
 		std::cout << "c" << std::endl;
@@ -517,14 +586,4 @@ const std::string unshort_url(
 	}
 	
 	return this_url;
-}
-
-int main() {
-	init_unalix();
-	
-	while (true) {
-		std::cout << unshort_url("https://bit.ly/3HWj9fd") << std::endl;
-	}
-	
-	return 0;
 }

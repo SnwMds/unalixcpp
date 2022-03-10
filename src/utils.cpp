@@ -122,7 +122,7 @@ const std::string requote_uri(const std::string &str){
 	return result;
 }
 
-const std::string strip_empty_r(const std::string &query) {
+const std::string strip_query(const std::string &query) {
 	
 	std::ostringstream os;
 

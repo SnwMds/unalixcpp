@@ -1,5 +1,3 @@
-void init_unalix();
-
 const std::string clear_url(
 	const std::string url,
 	const bool ignore_referral_marketing = false,

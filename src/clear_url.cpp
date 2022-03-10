@@ -11,8 +11,10 @@
 #include <json/json.h>
 
 #include "uri.hpp"
+#include "rulesets.hpp"
 #include "utils.hpp"
 
+/*
 struct Ruleset {
 	private:
 		const std::regex urlPattern;
@@ -43,31 +45,31 @@ struct Ruleset {
 		{}
 		
 		const std::regex get_url_pattern() const {
-			return this -> urlPattern;
+			return this.urlPattern;
 		}
 		
 		const bool get_complete_provider() const {
-			return this -> completeProvider;
+			return this.completeProvider;
 		}
 		
 		const std::vector<std::regex> get_rules() const {
-			return this -> rules;
+			return this.rules;
 		}
 		
 		const std::vector<std::regex> get_raw_rules() const {
-			return this -> rawRules;
+			return this.rawRules;
 		}
 		
 		const std::vector<std::regex> get_referral_marketing() const {
-			return this -> referralMarketing;
+			return this.referralMarketing;
 		}
 		
 		const std::vector<std::regex> get_exceptions() const {
-			return this -> exceptions;
+			return this.exceptions;
 		}
 		
 		const std::vector<std::regex> get_redirections() const {
-			return this -> redirections;
+			return this.redirections;
 		}
 };
 
@@ -193,6 +195,10 @@ void init_unalix() {
 	}
 	
 }
+*/
+
+const std::string RULE_PREFIX = "(%(?:26|23|3[Ff])|&|\\?)";
+const std::string RULE_SUFFIX = "(?:(?:=|%3[Dd])[^&]*)";
 
 const std::string clear_url(
 	const std::string url,
@@ -206,21 +212,23 @@ const std::string clear_url(
 	
 	std::string this_url = url;
 	
-	for (const Ruleset* ruleset: rulesets) {
-		if (skip_blocked && ruleset -> get_complete_provider()) {
+	for (const Ruleset ruleset: rulesets) {
+		if (skip_blocked && ruleset.get_complete_provider()) {
 			continue;
 		}
 		
+		const std::regex pattern = std::regex(ruleset.get_url_pattern());
 		std::smatch groups;
 		
-		if (std::regex_search(this_url, groups, ruleset -> get_url_pattern())) {
+		if (std::regex_search(this_url, groups, pattern)) {
 			if (!ignore_exceptions) {
 				bool exception_matched = false;
 				
-				for (const std::regex exception : ruleset -> get_exceptions()) {
+				for (const std::string exception : ruleset.get_exceptions()) {
+					const std::regex pattern = std::regex(exception);
 					std::smatch groups;
 					
-					if (std::regex_search(this_url, groups, exception)) {
+					if (std::regex_search(this_url, groups, pattern)) {
 						exception_matched = true;
 						break;
 					}
@@ -232,10 +240,11 @@ const std::string clear_url(
 			}
 			
 			if (!ignore_redirections) {
-				for (const std::regex redirection : ruleset -> get_redirections()) {
+				for (const std::string redirection : ruleset.get_redirections()) {
+					const std::regex pattern = std::regex(redirection);
 					std::smatch groups;
 					
-					if (std::regex_search(this_url, groups, redirection)) {
+					if (std::regex_search(this_url, groups, pattern)) {
 						const std::string target_url = groups[1];
 						const std::string redirection_result = requote_uri(urldecode(target_url));
 						
@@ -269,23 +278,25 @@ const std::string clear_url(
 					}
 				}
 			}
-			
+
 			URI uri = URI::from_string(this_url);
-			
+
 			if (uri.get_query() != "") {
 				if (!ignore_rules) {
-					for (const std::regex rule : ruleset -> get_rules()) {
+					for (const std::string rule : ruleset.get_rules()) {
+						const std::regex pattern = std::regex(RULE_PREFIX + rule + RULE_SUFFIX);
 						const std::string replacement = "$1";
-						const std::string query = std::regex_replace(uri.get_query(), rule, replacement);
+						const std::string query = std::regex_replace(uri.get_query(), pattern, replacement);
 						
 						uri.set_query(query);
 					}
 				}
 				
 				if (!ignore_referral_marketing) {
-					for (const std::regex referral_marketing : ruleset -> get_referral_marketing()) {
+					for (const std::string referral_marketing : ruleset.get_referral_marketing()) {
+						const std::regex pattern = std::regex(RULE_PREFIX + referral_marketing + RULE_SUFFIX);
 						const std::string replacement = "$1";
-						const std::string query = std::regex_replace(uri.get_query(), referral_marketing, replacement);
+						const std::string query = std::regex_replace(uri.get_query(), pattern, replacement);
 						
 						uri.set_query(query);
 					}
@@ -295,18 +306,20 @@ const std::string clear_url(
 			// The fragment might contains tracking fields as well
 			if (uri.get_fragment() != "") {
 				if (!ignore_rules) {
-					for (const std::regex rule : ruleset -> get_rules()) {
+					for (const std::string rule : ruleset.get_rules()) {
+						const std::regex pattern = std::regex(rule);
 						const std::string replacement = "$1";
-						const std::string fragment = std::regex_replace(uri.get_fragment(), rule, replacement);
+						const std::string fragment = std::regex_replace(uri.get_fragment(), pattern, replacement);
 						
 						uri.set_fragment(fragment);
 					}
 				}
 				
 				if (!ignore_referral_marketing) {
-					for (const std::regex referral_marketing : ruleset -> get_referral_marketing()) {
+					for (const std::string referral_marketing : ruleset.get_referral_marketing()) {
+						const std::regex pattern = std::regex(referral_marketing);
 						const std::string replacement = "$1";
-						const std::string fragment = std::regex_replace(uri.get_fragment(), referral_marketing, replacement);
+						const std::string fragment = std::regex_replace(uri.get_fragment(), pattern, replacement);
 						
 						uri.set_fragment(fragment);
 					}
@@ -314,12 +327,21 @@ const std::string clear_url(
 			}
 			
 			if (uri.get_path() != "") {
-				for (const std::regex raw_rule : ruleset -> get_raw_rules()) {
+				for (const std::string raw_rule : ruleset.get_raw_rules()) {
+					const std::regex pattern = std::regex(raw_rule);
 					const std::string replacement = "$1";
-					const std::string path = std::regex_replace(uri.get_path(), raw_rule, replacement);
+					const std::string path = std::regex_replace(uri.get_path(), pattern, replacement);
 					
 					uri.set_path(path);
 				}
+			}
+			
+			if (uri.get_query() != "") {
+				uri.set_query(strip_query(uri.get_query()));
+			}
+			
+			if (uri.get_fragment() != "") {
+				uri.set_fragment(strip_query(uri.get_fragment()));
 			}
 			
 			this_url = uri.to_string();
