@@ -1,7 +1,5 @@
-#define PCRE2_CODE_UNIT_WIDTH 8
-
 #ifndef RULESETS
-	#define RULESETS {"../rulesets/data.min.json", "../rulesets/unalix.json"}
+	#define RULESETS {"/storage/emulated/0/rulesets/data.min.json", "/storage/emulated/0/rulesets/unalix.json"}
 #endif
 
 #include <iostream>
@@ -80,7 +78,7 @@ std::vector<const Ruleset*> compile_rulesets() {
 	for (const std::string filename : RULESETS) {
 		std::ifstream file = std::ifstream(filename);
 		
-		if (errno != 0) {
+		if (file.fail()) {
 			fprintf(stderr, "ifstream: %s: %s\n", filename.c_str(), strerror(errno));
 			abort();
 		}
@@ -203,9 +201,7 @@ const std::string clear_url(
 	const bool ignore_exceptions = false,
 	const bool ignore_raw_rules = false,
 	const bool ignore_redirections  = false,
-	const bool skip_blocked = false,
-	const bool strip_duplicates = false,
-	const bool strip_empty = false
+	const bool skip_blocked = false
 ) {
 	
 	std::string this_url = url;
@@ -241,7 +237,7 @@ const std::string clear_url(
 					
 					if (std::regex_search(this_url, groups, redirection)) {
 						const std::string target_url = groups[1];
-						std::string redirection_result = requote_uri(urldecode(target_url));
+						const std::string redirection_result = requote_uri(urldecode(target_url));
 						
 						// Avoid empty URLs
 						if (redirection_result == "") {
@@ -253,87 +249,80 @@ const std::string clear_url(
 							continue;
 						}
 						
-						const URI* uri = URI::from_string(redirection_result.c_str());
+						URI uri = URI::from_string(redirection_result);
 						
 						// Workaround for URLs without scheme (see https://github.com/ClearURLs/Addon/issues/71)
-						if (uri -> get_scheme() == "") {
-							redirection_result = "http://" + redirection_result;
+						if (uri.get_scheme() == "") {
+							uri.set_scheme("http");
 						}
 						
 						return clear_url(
-							redirection_result,
+							uri.to_string(),
 							ignore_referral_marketing,
 							ignore_rules,
 							ignore_exceptions,
 							ignore_raw_rules,
 							ignore_redirections,
-							skip_blocked,
-							strip_duplicates,
-							strip_empty
+							skip_blocked
 						);
 						
 					}
 				}
 			}
 			
-			const URI* uri = URI::from_string(this_url);
+			URI uri = URI::from_string(this_url);
 			
-			const std::string scheme = uri -> get_scheme();
-			const std::string host = uri -> get_host();
-			const int port = uri -> get_port();
-			std::string path = uri -> get_path();
-			std::string query = uri -> get_query();
-			std::string fragment = uri -> get_fragment();
-			
-			if (query != "") {
+			if (uri.get_query() != "") {
 				if (!ignore_rules) {
 					for (const std::regex rule : ruleset -> get_rules()) {
 						const std::string replacement = "$1";
-						query = std::regex_replace(query, rule, replacement);
+						const std::string query = std::regex_replace(uri.get_query(), rule, replacement);
+						
+						uri.set_query(query);
 					}
 				}
 				
 				if (!ignore_referral_marketing) {
 					for (const std::regex referral_marketing : ruleset -> get_referral_marketing()) {
 						const std::string replacement = "$1";
-						query = std::regex_replace(query, referral_marketing, replacement);
+						const std::string query = std::regex_replace(uri.get_query(), referral_marketing, replacement);
+						
+						uri.set_query(query);
 					}
 				}
 			}
 			
 			// The fragment might contains tracking fields as well
-			if (fragment != "") {
+			if (uri.get_fragment() != "") {
 				if (!ignore_rules) {
 					for (const std::regex rule : ruleset -> get_rules()) {
 						const std::string replacement = "$1";
-						fragment = std::regex_replace(fragment, rule, replacement);
+						const std::string fragment = std::regex_replace(uri.get_fragment(), rule, replacement);
+						
+						uri.set_fragment(fragment);
 					}
 				}
 				
 				if (!ignore_referral_marketing) {
 					for (const std::regex referral_marketing : ruleset -> get_referral_marketing()) {
 						const std::string replacement = "$1";
-						fragment = std::regex_replace(fragment, referral_marketing, replacement);
+						const std::string fragment = std::regex_replace(uri.get_fragment(), referral_marketing, replacement);
+						
+						uri.set_fragment(fragment);
 					}
 				}
 			}
 			
-			if (path != "") {
+			if (uri.get_path() != "") {
 				for (const std::regex raw_rule : ruleset -> get_raw_rules()) {
 					const std::string replacement = "$1";
-					path = std::regex_replace(path, raw_rule, replacement);
+					const std::string path = std::regex_replace(uri.get_path(), raw_rule, replacement);
+					
+					uri.set_path(path);
 				}
 			}
 			
-			if (query != "") {
-				query = strip_empty_r(query);
-			}
-			
-			if (fragment != "") {
-				fragment = strip_empty_r(fragment);
-			}
-			
-			this_url = URI::to_string(scheme, host, port, path, query, fragment);
+			this_url = uri.to_string();
 		}
 	}
 	

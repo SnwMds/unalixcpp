@@ -3,22 +3,23 @@
 
 #include "uri.hpp"
 
-const std::string URI::to_string(
-	const std::string scheme,
-	const std::string host,
-	const int port,
-	const std::string path,
-	const std::string query,
-	const std::string fragment
-) {
-	return scheme + "://" + host + ((port == 0) ? ":"  + std::to_string(port) : "") + path + query + fragment;
+const std::string URI::to_string() {
+	return (
+		this -> scheme +
+		"://" +
+		this -> host +
+		((this -> port == 0) ? "" : ":"  + std::to_string(this -> port)) +
+		path +
+		query +
+		fragment
+	);
 }
 
-const URI* URI::from_string(const std::string &str) {
+URI URI::from_string(const std::string &str) {
 	
 	std::string scheme;
 	std::string host;
-	int port;
+	int port = 0;
 	std::string path;
 	std::string query;
 	std::string fragment;
@@ -67,7 +68,7 @@ const URI* URI::from_string(const std::string &str) {
 		fragment = std::string(fragment_start, str.end());
 	}
 	
-	const URI* uri = new URI(
+	URI uri = URI(
 		scheme,
 		host,
 		port,
