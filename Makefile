@@ -1,12 +1,12 @@
 PREFIX ?= /usr/local
 CXX ?= c++
-CXXFLAGS ?= -fpic -I/data/data/com.termux/files/home/BearSSL/inc -L/data/data/com.termux/files/home/BearSSL/build -lbearssl -s -Os -flto=full -w -Wfatal-errors -std=c++20
+CXXFLAGS += -fpic -lbearssl -s -Os -flto=full -w -Wfatal-errors -std=c++20
 OBJECT = src/uri.o src/utils.o src/clear_url.o src/unshort_url.o
 SRC = src/uri.cpp src/utils.cpp src/clear_url.cpp src/unshort_url.cpp
 SHARED_LIBRARY = src/libunalix.so
 HEADERS = src/unalix.hpp src/clear_url.hpp src/unshort_url.hpp
 
-library : $(OBJECT)
+all : $(OBJECT)
 	$(CXX) $(CXXFLAGS) -shared $(OBJECT) -o $(SHARED_LIBRARY)
 
 utils.o : utils.hpp
