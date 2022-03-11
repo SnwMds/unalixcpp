@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <string>
 #include <regex>
 #include <filesystem>
@@ -120,8 +118,6 @@ const std::string unshort_url(
 		ignore_redirections,
 		skip_blocked
 	);
-	
-	std::cout << this_url << std::endl;
 	
 	if (!(this_url.starts_with("http") || this_url.starts_with("https"))) {
 		UnsupportedProtocolError e;
@@ -326,7 +322,7 @@ const std::string unshort_url(
 		}
 		
 		const std::string raw_response = buffer;
-		std::cout << raw_response << std::endl;
+		
 		const size_t index = raw_response.find("\r\n\r\n");
 		const std::string raw_headers = raw_response.substr(0, index);
 		const std::string body = raw_response.substr(index + 4, raw_response.length());
@@ -509,7 +505,7 @@ const std::string unshort_url(
 			
 			headers.push_back(std::make_tuple(key, value));
 		}
-		std::cout << "c" << std::endl;
+		
 		response.set_headers(headers);
 		
 		std::string location;
